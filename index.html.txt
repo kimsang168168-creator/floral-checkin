@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Floral Workshop | Guest Check-In</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" type="text/javascript"></script>
+  <style>
+    :root {
+      --bg-cream: #FAF8F5;
+      --card-white: #FFFFFF;
+      --sage-primary: #4A6B5D;
+      --sage-light: #EBF1EE;
+      --blush-accent: #D8A7B1;
+      --text-dark: #2C3531;
+      --text-muted: #6B7570;
+      --warn-amber: #D9822B;
+      --error-rose: #C85A53;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-cream);
+      color: var(--text-dark);
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app-container { width: 100%; max-width: 540px; }
+
+    .header {
+      text-align: center;
+      padding: 24px 20px;
+      background: var(--card-white);
+      border-radius: 20px;
+      border: 1px solid #EAE4DC;
+      box-shadow: 0 8px 24px rgba(74, 107, 93, 0.06);
+      margin-bottom: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 5px;
+      background: linear-gradient(90deg, var(--sage-primary), var(--blush-accent));
+    }
+    .subtitle {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--sage-primary);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 30px;
+      color: var(--text-dark);
+      margin-bottom: 16px;
+    }
+
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      background: var(--bg-cream);
+      padding: 12px;
+      border-radius: 14px;
+    }
+    .stat-box span { display: block; font-size: 22px; font-weight: 700; color: var(--sage-primary); }
+    .stat-box label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .card {
+      background: var(--card-white);
+      border-radius: 20px;
+      padding: 20px;
+      border: 1px solid #EAE4DC;
+      box-shadow: 0 8px 24px rgba(74, 107, 93, 0.06);
+      margin-bottom: 18px;
+    }
+
+    .camera-controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+
+    .btn-cam-start {
+      width: 100%;
+      background: var(--sage-primary);
+      color: #FFFFFF;
+      font-size: 15px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(74, 107, 93, 0.2);
+    }
+
+    .btn-cam-stop {
+      width: 100%;
+      background: #F2EFE9;
+      color: var(--text-dark);
+      border: 1px solid #DCD5CC;
+      font-size: 14px;
+      padding: 12px 18px;
+      border-radius: 14px;
+      display: none;
+    }
+
+    .camera-select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #DCD5CC;
+      font-size: 13px;
+      background: var(--bg-cream);
+      display: none;
+      margin-bottom: 10px;
+    }
+
+    .scanner-placeholder {
+      background: var(--bg-cream);
+      border: 2px dashed var(--blush-accent);
+      border-radius: 14px;
+      padding: 32px 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    #reader {
+      width: 100%;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 2px solid var(--sage-primary);
+      display: none;
+    }
+
+    .result-card {
+      display: none;
+      padding: 18px;
+      border-radius: 16px;
+      margin-top: 16px;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .result-success { background: var(--sage-light); border-left: 5px solid var(--sage-primary); }
+    .result-duplicate { background: #FDF4E7; border-left: 5px solid var(--warn-amber); }
+    .result-unpaid { background: #FBECEB; border-left: 5px solid var(--error-rose); }
+
+    .result-status { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+    .guest-name { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 700; }
+    .guest-meta { font-size: 13px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+
+    .search-group { display: flex; gap: 8px; margin-top: 10px; }
+    input[type="text"] {
+      flex: 1;
+      padding: 12px 14px;
+      border: 1px solid #DCD5CC;
+      border-radius: 12px;
+      font-size: 14px;
+      outline: none;
+    }
+    input[type="text"]:focus { border-color: var(--sage-primary); }
+    
+    button {
+      background: var(--sage-primary);
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-override { background: var(--error-rose); margin-top: 12px; width: 100%; }
+    .search-results { margin-top: 12px; max-height: 200px; overflow-y: auto; }
+    .search-item {
+      display: flex;
+      https://script.google.com/macros/s/AKfycbxCkZLYqrGVHK4UrOblOhsA2L_E9OrldIZoKlaNZ7QX8acMVS4HYAwYDxV6JXCjMVYe/execjustify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #F0ECE6;
+      font-size: 14px;
+    }
+    .badge { padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; }
+    .badge-in { background: var(--sage-light); color: var(--sage-primary); }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="header">
+      <div class="subtitle">Floral Arrangement & Bouquet Event</div>
+      <h1>Guest Check-In Portal</h1>
+      <div class="stats-bar">
+        <div class="stat-box"><span id="stat-checked">0</span><label>Checked In</label></div>
+        <div class="stat-box"><span id="stat-paid">0</span><label>Paid Guests</label></div>
+        <div class="stat-box"><span id="stat-total">0</span><label>Registered</label></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="camera-controls">
+        <button id="start-cam-btn" class="btn-cam-start" onclick="requestAndStartCamera()">
+          📷 Open Camera to Scan QR
+        </button>
+        <button id="stop-cam-btn" class="btn-cam-stop" onclick="stopScanner()">
+          ⏹ Close Camera
+        </button>
+      </div>
+
+      <select id="camera-select" class="camera-select" onchange="switchCamera(this.value)"></select>
+
+      <div id="scanner-placeholder" class="scanner-placeholder">
+        Tap <strong>"Open Camera to Scan QR"</strong> above to start live scanning.
+      </div>
+      
+      <div id="reader"></div>
+      <div id="result-box" class="result-card"></div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">Manual Lookup (Name or ID)</div>
+      <div class="search-group">
+        <input type="text" id="search-input" placeholder="e.g., FLR-001 or Sokha..." onkeyup="filterGuests()">
+        <button onclick="manualSubmit()">Check In</button>
+      </div>
+      <div id="search-list" class="search-results"></div>
+    </div>
+  </div>
+
+  <script>
+    // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW:
+    const SCRIPT_URL = "PASTE_YOUR_GOOGLE_APPS_SCRIPT_URL_HERE";
+
+    let allParticipants = [];
+    let isProcessing = false;
+    let html5QrCode = null;
+    let isScanning = false;
+
+    window.onload = function() {
+      refreshDashboard();
+    };
+
+    async function refreshDashboard() {
+      try {
+        const response = await fetch(SCRIPT_URL);
+        const data = await response.json();
+        document.getElementById('stat-checked').innerText = data.stats.totalCheckedIn;
+        document.getElementById('stat-paid').innerText = data.stats.totalPaid;
+        document.getElementById('stat-total').innerText = data.stats.totalRegistered;
+        allParticipants = data.participants;
+      } catch (err) {
+        console.error("Error loading dashboard:", err);
+      }
+    }
+
+    async function requestAndStartCamera() {
+      const startBtn = document.getElementById('start-cam-btn');
+      const placeholder = document.getElementById('scanner-placeholder');
+
+      startBtn.disabled = true;
+      startBtn.innerText = "Starting Camera...";
+
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        if (!devices || devices.length === 0) {
+          throw new Error("No camera found on this device.");
+        }
+
+        const camSelect = document.getElementById('camera-select');
+        camSelect.innerHTML = devices.map((d, i) => 
+          `<option value="${d.id}">${d.label || 'Camera ' + (i + 1)}</option>`
+        ).join('');
+        if (devices.length > 1) camSelect.style.display = 'block';
+
+        const backCam = devices.find(d => 
+          d.label.toLowerCase().includes('back') || 
+          d.label.toLowerCase().includes('rear') || 
+          d.label.toLowerCase().includes('environment')
+        );
+        const selectedCameraId = backCam ? backCam.id : devices[devices.length - 1].id;
+        camSelect.value = selectedCameraId;
+
+        await launchScannerWithId(selectedCameraId);
+      } catch (err) {
+        startBtn.disabled = false;
+        startBtn.innerText = "📷 Open Camera to Scan QR";
+        placeholder.style.display = 'block';
+        placeholder.innerHTML = `<span style="color:#C85A53;">Camera Error: ${err.message || err}. Make sure Chrome has Camera permission enabled.</span>`;
+      }
+    }
+
+    async function launchScannerWithId(cameraId) {
+      const startBtn = document.getElementById('start-cam-btn');
+      const stopBtn = document.getElementById('stop-cam-btn');
+      const placeholder = document.getElementById('scanner-placeholder');
+      const readerDiv = document.getElementById('reader');
+
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+      }
+
+      if (isScanning) {
+        await html5QrCode.stop();
+        isScanning = false;
+      }
+
+      readerDiv.style.display = 'block';
+      placeholder.style.display = 'none';
+
+      await html5QrCode.start(
+        cameraId,
+        { fps: 10, qrbox: { width: 230, height: 230 } },
+        (decodedText) => {
+          if (!isProcessing) {
+            handleCheckIn(decodedText, false);
+          }
+        },
+        () => {}
+      );
+
+      isScanning = true;
+      startBtn.style.display = 'none';
+      startBtn.disabled = false;
+      startBtn.innerText = "📷 Open Camera to Scan QR";
+      stopBtn.style.display = 'block';
+    }
+
+    function switchCamera(cameraId) {
+      if (cameraId) launchScannerWithId(cameraId);
+    }
+
+    function stopScanner() {
+      if (html5QrCode && isScanning) {
+        html5QrCode.stop().then(() => {
+          isScanning = false;
+          document.getElementById('reader').style.display = 'none';
+          document.getElementById('stop-cam-btn').style.display = 'none';
+          document.getElementById('camera-select').style.display = 'none';
+          document.getElementById('start-cam-btn').style.display = 'flex';
+          document.getElementById('scanner-placeholder').style.display = 'block';
+          document.getElementById('scanner-placeholder').innerHTML = 
+            `Camera closed. Tap <strong>"Open Camera to Scan QR"</strong> to resume.`;
+        });
+      }
+    }
+
+    async function handleCheckIn(id, forcePay) {
+      isProcessing = true;
+      const box = document.getElementById('result-box');
+      box.style.display = 'block';
+      box.className = 'result-card result-duplicate';
+      box.innerHTML = `<div class="result-status">Verifying E-Ticket (${id})...</div>`;
+
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ id: id, forcePay: forcePay })
+        });
+        const res = await response.json();
+        renderResult(res);
+        refreshDashboard();
+      } catch (err) {
+        box.className = 'result-card result-unpaid';
+        box.innerHTML = `<div class="result-status" style="color:var(--error-rose);">Network Error: Could not connect to Google Sheet.</div>`;
+      } finally {
+        setTimeout(() => { isProcessing = false; }, 2500);
+      }
+    }
+
+    function renderResult(res) {
+      const box = document.getElementById('result-box');
+      box.style.display = 'block';
+
+      if (res.status === 'SUCCESS') {
+        box.className = 'result-card result-success';
+        box.innerHTML = `
+          <div class="result-status" style="color:var(--sage-primary);">✓ ${res.message}</div>
+          <div class="guest-name">${res.participant.name}</div>
+          <div class="guest-meta">
+            <strong>ID:</strong> ${res.participant.id} &bull; <strong>Sex:</strong> ${res.participant.sex}<br>
+            <strong>Package:</strong> ${res.participant.package || 'Standard'} &bull; <strong>Status:</strong> ${res.participant.paymentStatus}<br>
+            <strong>Time:</strong> ${res.participant.timestamp}
+          </div>`;
+      } else if (res.status === 'DUPLICATE') {
+        box.className = 'result-card result-duplicate';
+        box.innerHTML = `
+          <div class="result-status" style="color:var(--warn-amber);">⚠ ${res.message}</div>
+          <div class="guest-name">${res.participant.name}</div>
+          <div class="guest-meta">ID: ${res.participant.id} &bull; Package: ${res.participant.package || 'Standard'}</div>`;
+      } else if (res.status === 'UNPAID') {
+        box.className = 'result-card result-unpaid';
+        box.innerHTML = `
+          <div class="result-status" style="color:var(--error-rose);">✕ ${res.message}</div>
+          <div class="guest-name">${res.participant.name}</div>
+          <div class="guest-meta">ID: ${res.participant.id} &bull; Sex: ${res.participant.sex}</div>
+          <button class="btn-override" onclick="handleCheckIn('${res.participant.id}', true)">Confirm Payment & Check In</button>`;
+      } else {
+        box.className = 'result-card result-unpaid';
+        box.innerHTML = `<div class="result-status" style="color:var(--error-rose);">✕ ${res.message}</div>`;
+      }
+    }
+
+    function manualSubmit() {
+      const val = document.getElementById('search-input').value.trim();
+      if (val) handleCheckIn(val, false);
+    }
+
+    function filterGuests() {
+      const query = document.getElementById('search-input').value.toLowerCase().trim();
+      const list = document.getElementById('search-list');
+      if (!query) { list.innerHTML = ''; return; }
+
+      const matches = allParticipants.filter(p => 
+        p.id.toLowerCase().includes(query) || p.name.toLowerCase().includes(query)
+      ).slice(0, 6);
+
+      list.innerHTML = matches.map(p => `
+        <div class="search-item">
+          <div>
+            <strong>${p.name}</strong> <span style="color:#6B7570; font-size:12px;">(${p.id})</span><br>
+            <span style="font-size:12px; color:#6B7570;">${p.sex} &bull; ${p.paymentStatus}</span>
+          </div>
+          ${p.checkInStatus.toLowerCase() === 'checked in' 
+            ? `<span class="badge badge-in">Checked In</span>` 
+            : `<button style="padding:6px 12px; font-size:12px;" onclick="handleCheckIn('${p.id}', false)">Check In</button>`}
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>
