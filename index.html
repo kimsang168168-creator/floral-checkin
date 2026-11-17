@@ -60,8 +60,21 @@
       font-family: 'Cormorant Garamond', serif;
       font-size: 30px;
       color: var(--text-dark);
-      margin-bottom: 16px;
+      margin-bottom: 10px;
     }
+
+    .conn-badge {
+      display: inline-block;
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: #F2EFE9;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      font-weight: 500;
+    }
+    .conn-ok { background: var(--sage-light); color: var(--sage-primary); }
+    .conn-err { background: #FBECEB; color: var(--error-rose); }
 
     .stats-bar {
       display: grid;
@@ -195,6 +208,7 @@
     <div class="header">
       <div class="subtitle">Floral Arrangement & Bouquet Event</div>
       <h1>Guest Check-In Portal</h1>
+      <div id="conn-badge" class="conn-badge">⏳ Connecting to Google Sheet...</div>
       <div class="stats-bar">
         <div class="stat-box"><span id="stat-checked">0</span><label>Checked In</label></div>
         <div class="stat-box"><span id="stat-paid">0</span><label>Paid Guests</label></div>
@@ -233,8 +247,8 @@
   </div>
 
   <script>
-    // PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL BELOW:
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxCkZLYqrGVHK4UrOblOhsA2L_E9OrldIZoKlaNZ7QX8acMVS4HYAwYDxV6JXCjMVYe/exec";
+    // PASTE YOUR NEW GOOGLE APPS SCRIPT /exec URL BELOW:
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxMEsWb7bWRAyACwlJq4Ep6k2eefoIP1onbB3igRmGaBHh0vgBzc7BEPbRIm08WjDnS/exec";
 
     let allParticipants = [];
     let isProcessing = false;
@@ -246,15 +260,25 @@
     };
 
     async function refreshDashboard() {
+      const badge = document.getElementById('conn-badge');
       try {
-        const response = await fetch(SCRIPT_URL);
+        const response = await fetch(`${SCRIPT_URL}?action=dashboard&t=${Date.now()}`);
         const data = await response.json();
-        document.getElementById('stat-checked').innerText = data.stats.totalCheckedIn;
-        document.getElementById('stat-paid').innerText = data.stats.totalPaid;
-        document.getElementById('stat-total').innerText = data.stats.totalRegistered;
-        allParticipants = data.participants;
+        
+        if (data.status === 'OK') {
+          badge.className = 'conn-badge conn-ok';
+          badge.innerText = '🟢 Connected to Google Sheet';
+          document.getElementById('stat-checked').innerText = data.stats.totalCheckedIn;
+          document.getElementById('stat-paid').innerText = data.stats.totalPaid;
+          document.getElementById('stat-total').innerText = data.stats.totalRegistered;
+          allParticipants = data.participants;
+        } else {
+          throw new Error(data.message || 'Invalid response');
+        }
       } catch (err) {
-        console.error("Error loading dashboard:", err);
+        badge.className = 'conn-badge conn-err';
+        badge.innerText = '🔴 Not Connected — Check Apps Script URL';
+        console.error("Dashboard load error:", err);
       }
     }
 
@@ -357,11 +381,8 @@
       box.innerHTML = `<div class="result-status">Verifying E-Ticket (${id})...</div>`;
 
       try {
-        const response = await fetch(SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ id: id, forcePay: forcePay })
-        });
+        const url = `${SCRIPT_URL}?action=checkin&id=${encodeURIComponent(id)}&forcePay=${forcePay}&t=${Date.now()}`;
+        const response = await fetch(url);
         const res = await response.json();
         renderResult(res);
         refreshDashboard();
@@ -383,8 +404,8 @@
           <div class="result-status" style="color:var(--sage-primary);">✓ ${res.message}</div>
           <div class="guest-name">${res.participant.name}</div>
           <div class="guest-meta">
-            <strong>ID:</strong> ${res.participant.id} &bull; <strong>Sex:</strong> ${res.participant.sex}<br>
-            <strong>Package:</strong> ${res.participant.package || 'Standard'} &bull; <strong>Status:</strong> ${res.participant.paymentStatus}<br>
+            <strong>ID:</strong> ${res.participant.id} • <strong>Sex:</strong> ${res.participant.sex}<br>
+            <strong>Package:</strong> ${res.participant.package || 'Standard'} • <strong>Status:</strong> ${res.participant.paymentStatus}<br>
             <strong>Time:</strong> ${res.participant.timestamp}
           </div>`;
       } else if (res.status === 'DUPLICATE') {
@@ -392,13 +413,13 @@
         box.innerHTML = `
           <div class="result-status" style="color:var(--warn-amber);">⚠ ${res.message}</div>
           <div class="guest-name">${res.participant.name}</div>
-          <div class="guest-meta">ID: ${res.participant.id} &bull; Package: ${res.participant.package || 'Standard'}</div>`;
+          <div class="guest-meta">ID: ${res.participant.id} • Package: ${res.participant.package || 'Standard'}</div>`;
       } else if (res.status === 'UNPAID') {
         box.className = 'result-card result-unpaid';
         box.innerHTML = `
           <div class="result-status" style="color:var(--error-rose);">✕ ${res.message}</div>
           <div class="guest-name">${res.participant.name}</div>
-          <div class="guest-meta">ID: ${res.participant.id} &bull; Sex: ${res.participant.sex}</div>
+          <div class="guest-meta">ID: ${res.participant.id} • Sex: ${res.participant.sex}</div>
           <button class="btn-override" onclick="handleCheckIn('${res.participant.id}', true)">Confirm Payment & Check In</button>`;
       } else {
         box.className = 'result-card result-unpaid';
@@ -424,7 +445,7 @@
         <div class="search-item">
           <div>
             <strong>${p.name}</strong> <span style="color:#6B7570; font-size:12px;">(${p.id})</span><br>
-            <span style="font-size:12px; color:#6B7570;">${p.sex} &bull; ${p.paymentStatus}</span>
+            <span style="font-size:12px; color:#6B7570;">${p.sex} • ${p.paymentStatus}</span>
           </div>
           ${p.checkInStatus.toLowerCase() === 'checked in' 
             ? `<span class="badge badge-in">Checked In</span>` 
